@@ -31,7 +31,7 @@
   <arg name="delay_compensation_time" default="0.0" doc="steering input delay time for delay compensation"/>
 
   <arg name="vehicle_model_steer_tau" default="0.3" doc="steering dynamics time constant (1d approzimation) [s]"/>
-  <arg name="vehicle_model_wheelbase" default="2.9" doc="wheel base length [m]"/>
+  <arg name="vehicle_model_wheelbase" default="1.686" doc="wheel base length [m]"/>
   <arg name="steer_lim_deg" default="40.0" doc="steering angle limit [deg]"/>
   <arg name="steering_gear_ratio" default="20.0" doc="steering gear ratio"/>
 
