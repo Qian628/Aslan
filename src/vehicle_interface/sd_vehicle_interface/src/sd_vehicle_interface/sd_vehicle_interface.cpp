@@ -196,6 +196,7 @@ int main(int argc, char **argv)
 
 				SD_Current_Control.steer = FinalDBWSteerRequest_Pc;
 				SD_Current_Control.torque = FinalDBWTorqueRequest_Pc;
+				SD_Current_Control.header.stamp = ros::Time::now();  // Set the timestamp field of the header to the current time
 				sd_control_pub.publish(SD_Current_Control);
 
 			}

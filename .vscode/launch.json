@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "/home/qian/Aslan/src/mpc/plot_trajectory/compare_csv_rosbag_trajectories.py",
+            "console": "integratedTerminal",
+            "args": ["--csv", "/home/qian/Aslan/testruns/Empty/LCTrajectories/trajectory_High_7mps.csv", "--rosbag", "/home/qian/Aslan/testruns/Empty/LC_test_logs/LC_HighUrgency_7mps_MPC_1304/LC_HighUrgency_7mps_MPC_1304.bag"]
+        }
+    ]
+}
+
+

@@ -1,9 +1,59 @@
+Lane Selection:
+  distance_threshold_neighbor_lanes: 5.0
+  enablePlannerDynamicSwitch: false
+  lane_change_interval: 10.0
+  lane_change_target_minimum: 10.0
+  lane_change_target_ratio: 5.0
+  vector_length_hermite_curve: 10.0
+Low Pass Filtering:
+  lateral_accel_limit: 0.8
+  lowpass_gain_angular_z: 0.0
+  lowpass_gain_linear_x: 0.0
+Pure Pursuit:
+  is_linear_interpolation: true
+  lookahead_distance: 4.0
+  lookahead_ratio: 2.0
+  minimum_lookahead_distance: 6.0
+  param_flag: 1
+  publishes_for_steering_robot: false
+  velocity: 5.0
+Velocity Request:
+  deceleration_range: 0
+  detection_height_bottom: -1.5
+  detection_height_top: 0.1
+  detection_range: 1.3
+  lidar_points_topic: points_no_ground
+  radar_points_topic: radar/target_list_cartesian
+  radar_threshold_points: 1
+  stop_distance_obstacle: 15.0
+  stop_distance_stopline: 5.0
+  threshold_points: 5
+Waypoints Loader:
+  accel_limit: 0.98
+  decel_limit: 0.98
+  disable_decision_maker: true
+  end_point_offset: 5
+  multi_lane_csv: /home/qian/Aslan/testruns/Empty/LCTrajectories/trajectory_High_7mps.csv
+  radius_min: 6.0
+  radius_thresh: 20.0
+  replanning_mode: true
+  resample_interval: 1.0
+  resample_mode: true
+  velocity_max: 10.0
+  velocity_min: 4.0
+  velocity_offset: 4
 booted_cmds:
   names:
-  - setup_tf
-  - Voxel Grid
-  - Ray Ground
-  - NDT Mapping
+  - twizy_sim
+  - Waypoints Loader
+  - null
+  - Velocity Request
+  - Lane Selection
+  - Pure Pursuit
+  - Low Pass Filtering
+  - null
+  - null
+  - vehicle_interface
 lane_select:
   distance_threshold_neighbor_lanes: 5.0
   enablePlannerDynamicSwitch: false
@@ -55,7 +105,7 @@ obstacle_avoid:
 pcd:
   pcd_file: ''
 play_rosbag_play:
-  file: ''
+  file: /home/qian/Aslan/testruns/Parkland_GT/Parkland_GT_0504.bag
   rate: ''
   repeat: false
   start: 0
@@ -113,15 +163,15 @@ twist_filter:
   lowpass_gain_angular_z: 0.0
   lowpass_gain_linear_x: 0.0
 twizy_sim:
-  enable_rviz: true
-  world_cmd_param: default
+  enable_rviz: false
+  world_cmd_param: empty
 vehicle_info:
   info_path: ''
 vehicle_interface:
-  ins_cmd_param: oxts
-  mode_cmd_param: false
-  speed_input_cmd_param: vehicle_can_speed
-  vehicle_cmd_param: env200
+  ins_cmd_param: none
+  mode_cmd_param: 'true'
+  speed_input_cmd_param: ndt_speed
+  vehicle_cmd_param: twizy
 vehicle_model:
   file: ''
   model_path: ''

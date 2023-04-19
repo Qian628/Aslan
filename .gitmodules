@@ -25,3 +25,6 @@
 	path = src/sensing/drivers/lidar/velodyne_vlp16_vlp32c/velodyne
 	url = https://github.com/project-aslan/velodyne
 	branch = aslan-dev
+[submodule "src/mpc/autoware_ai_messages"]
+	path = src/mpc/autoware_ai_messages
+	url = https://github.com/autowarefoundation/autoware_ai_messages.git

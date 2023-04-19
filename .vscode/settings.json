@@ -1,0 +1,12 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/opt/ros/melodic/lib/python2.7/dist-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/opt/ros/melodic/lib/python2.7/dist-packages"
+    ],
+    "C_Cpp.default.includePath": [
+        "/home/qian/Aslan/src/autoware.ai/planning/motion/waypoint_follower/include/waypoint_follower/pure_pursuit_core.h"
+    ],
+    "python.pythonPath": "/usr/bin/python3"
+}
