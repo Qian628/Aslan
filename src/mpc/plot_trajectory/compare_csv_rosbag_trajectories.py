@@ -35,7 +35,6 @@ def plot_trajectory_from_rosbag(file_path):
             angular_vel.append(msg.twist.angular.z)
             time_twist_cmd.append(msg.header.stamp.to_sec())
         elif topic == '/sd_control' and msg._type == 'aslan_msgs/SDControl':
-            print("Timestamp:", msg.header.stamp.to_sec())
             steer.append(msg.steer)
             torque.append(msg.torque)
             time_sd_control.append(msg.header.stamp.to_sec())
@@ -59,14 +58,36 @@ def plot_trajectory_from_rosbag(file_path):
 
     bag.close()
 
+def save_plots(output_folder):
+    plt.figure(1)
+    plt.savefig("{}/trajectory_comparison.png".format(output_folder))
+
+    plt.figure(2)
+    plt.savefig("{}/vehicle_speed.png".format(output_folder))
+
+    plt.figure(3)
+    plt.savefig("{}/target_linear_velocity.png".format(output_folder))
+
+    plt.figure(4)
+    plt.savefig("{}/target_angular_velocity.png".format(output_folder))
+
+    plt.figure(5)
+    plt.savefig("{}/steering_angle.png".format(output_folder))
+
+    plt.figure(6)
+    plt.savefig("{}/torque.png".format(output_folder))
+
 def main():
     parser = argparse.ArgumentParser(description='Plot and compare reference and executed lane change trajectories.')
     parser.add_argument('--csv', type=str, required=True, help='Path to the reference trajectory CSV file.')
     parser.add_argument('--rosbag', type=str, required=True, help='Path to the executed trajectory rosbag file.')
+    parser.add_argument('--output', type=str, required=True, help='Path to the folder where the plots will be saved.')
     args = parser.parse_args()
 
     plot_trajectory_from_csv(args.csv)
     plot_trajectory_from_rosbag(args.rosbag)
+
+    save_plots(args.output)
 
     plt.figure(1)
     plt.xlabel('X')
