@@ -68,10 +68,10 @@ MPCFollower::MPCFollower()
   else if (vehicle_model_type_ == "dynamics")
   {
     double mass_fl, mass_fr, mass_rl, mass_rr, cf, cr;
-    pnh_.param("mass_fl", mass_fl, double(600));
-    pnh_.param("mass_fr", mass_fr, double(600));
-    pnh_.param("mass_rl", mass_rl, double(600));
-    pnh_.param("mass_rr", mass_rr, double(600));
+    pnh_.param("mass_fl", mass_fl, double(108.75)); // Assuming mass applied to each wheel are the same. Total mass of twizy is 435kg.
+    pnh_.param("mass_fr", mass_fr, double(108.75));
+    pnh_.param("mass_rl", mass_rl, double(108.75));
+    pnh_.param("mass_rr", mass_rr, double(108.75));
     pnh_.param("cf", cf, double(155494.663));
     pnh_.param("cr", cr, double(155494.663));
 
