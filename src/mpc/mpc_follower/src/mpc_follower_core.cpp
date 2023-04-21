@@ -176,7 +176,7 @@ void MPCFollower::timerCallback(const ros::TimerEvent &te)
   /* solve MPC */
   auto start = std::chrono::system_clock::now();
   const bool mpc_solved = calculateMPC(vel_cmd, acc_cmd, steer_cmd, steer_vel_cmd);
-  double elapsed_ms = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - start).count() * 1.0e-6;
+  double elapsed_ms = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - start).count() * 1.0e-6; // A timer to measure the time of MPC calculation
   DEBUG_INFO("[MPC] timerCallback: MPC calculating time = %f [ms]\n", elapsed_ms);
 
   /* publish computing time */
@@ -195,7 +195,9 @@ void MPCFollower::timerCallback(const ros::TimerEvent &te)
 
   publishControlCommands(vel_cmd, acc_cmd, steer_cmd, steer_vel_cmd);
 };
-
+/* This code defines a function called calculateMPC in the MPCFollower class. 
+It takes four reference arguments: vel_cmd, acc_cmd, steer_cmd, and steer_vel_cmd. 
+The function calculates the Model Predictive Control (MPC) commands for a vehicle, given the reference trajectory and vehicle model parameters.*/
 bool MPCFollower::calculateMPC(double &vel_cmd, double &acc_cmd, double &steer_cmd, double &steer_vel_cmd)
 {
   const int N = mpc_param_.prediction_horizon;
@@ -203,7 +205,8 @@ bool MPCFollower::calculateMPC(double &vel_cmd, double &acc_cmd, double &steer_c
   const int DIM_X = vehicle_model_ptr_->getDimX();
   const int DIM_U = vehicle_model_ptr_->getDimU();
   const int DIM_Y = vehicle_model_ptr_->getDimY();
-
+  
+  /*calculate the current yaw*/
   const double current_yaw = tf2::getYaw(vehicle_status_.pose.orientation);
 
   /* calculate nearest point on reference trajectory (used as initial state) */
@@ -235,7 +238,7 @@ bool MPCFollower::calculateMPC(double &vel_cmd, double &acc_cmd, double &steer_c
     return false;
   }
 
-  /* convert tracking x,y error to lat error */
+  /* convert tracking x,y error to lat error by projecting tracking x,y error onto the perpendicular direction to the reference trajectory */
   const double err_x = vehicle_status_.pose.position.x - nearest_pose.position.x;
   const double err_y = vehicle_status_.pose.position.y - nearest_pose.position.y;
   const double sp_yaw = tf2::getYaw(nearest_pose.orientation);
@@ -438,12 +441,12 @@ bool MPCFollower::calculateMPC(double &vel_cmd, double &acc_cmd, double &steer_c
   Eigen::MatrixXd f = (Cex * (Aex * x0 + Wex)).transpose() * QCB - Urefex.transpose() * Rex;
 
   /* constraint matrix : lb < U < ub, lbA < A*U < ubA */
-  const double u_lim = amathutils::deg2rad(steer_lim_deg_);
+  const double u_lim = amathutils::deg2rad(steer_lim_deg_); 
   Eigen::MatrixXd A = Eigen::MatrixXd::Zero(DIM_U * N, DIM_U * N);
   Eigen::MatrixXd lbA = Eigen::MatrixXd::Zero(DIM_U * N, 1);
   Eigen::MatrixXd ubA = Eigen::MatrixXd::Zero(DIM_U * N, 1);
-  Eigen::VectorXd lb = Eigen::VectorXd::Constant(DIM_U * N, -u_lim); // min steering angle
-  Eigen::VectorXd ub = Eigen::VectorXd::Constant(DIM_U * N, u_lim);  // max steering angle
+  Eigen::VectorXd lb = Eigen::VectorXd::Constant(DIM_U * N, -u_lim); // applying min steering limit
+  Eigen::VectorXd ub = Eigen::VectorXd::Constant(DIM_U * N, u_lim);  // applying max steering limit
 
   auto start = std::chrono::system_clock::now();
   Eigen::VectorXd Uex;
