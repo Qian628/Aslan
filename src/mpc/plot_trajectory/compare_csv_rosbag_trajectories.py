@@ -40,21 +40,51 @@ def plot_trajectory_from_rosbag(file_path):
             time_sd_control.append(msg.header.stamp.to_sec())
     plt.figure(1)
     plt.plot(x, y, label='Executed Trajectory')
+    plt.xlabel('X')
+    plt.ylabel('Y')
+    plt.legend()
+    plt.title('Comparison of Reference and Executed Trajectories')
+    plt.grid()
 
     plt.figure(2)
     plt.plot(time_current_velocity,speed, label='Actual Vehicle Speed')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Speed [m/s]')
+    plt.legend()
+    plt.title('Vehicle Speed Over Time')
+    plt.grid()
 
     plt.figure(3)
     plt.plot(time_twist_cmd,linear_vel, label='Target Linear Velocity')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Target Linear Velocity [m/s]')
+    plt.legend()
+    plt.title('Target Linear Velocity [m/s]')
+    plt.grid()
 
     plt.figure(4)
     plt.plot(time_twist_cmd, angular_vel, label='Target Angular Velocity')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Target Angular Velocity [rad/s]')
+    plt.legend()
+    plt.title('Target Angular Velocity [rad/s]')
+    plt.grid()
 
     plt.figure(5)
     plt.plot(time_sd_control, steer, label='Steering Angle [%]') # Range -100 to +100, +100 is maximum left turn, -100 is maximum right turn
+    plt.xlabel('Time [s]')
+    plt.ylabel('Steering Angle [%]')
+    plt.legend()
+    plt.title('Steering Angle [%]')
+    plt.grid()
 
     plt.figure(6)
     plt.plot(time_sd_control, torque, label='Torque [%]') # Range -100 to 100, -100 is max brake, +100 is max throttle
+    plt.xlabel('Time [s]')
+    plt.ylabel('Torque [%]')
+    plt.legend()
+    plt.title('Torque [%]')
+    plt.grid()
 
     bag.close()
 
@@ -88,49 +118,7 @@ def main():
     plot_trajectory_from_rosbag(args.rosbag)
 
     save_plots(args.output)
-
-    plt.figure(1)
-    plt.xlabel('X')
-    plt.ylabel('Y')
-    plt.legend()
-    plt.title('Comparison of Reference and Executed Trajectories')
-    plt.grid()
-
-    plt.figure(2)
-    plt.xlabel('Time [s]')
-    plt.ylabel('Speed [m/s]')
-    plt.legend()
-    plt.title('Vehicle Speed Over Time')
-    plt.grid()
-
-    plt.figure(3)
-    plt.xlabel('Time [s]')
-    plt.ylabel('Target Linear Velocity [m/s]')
-    plt.legend()
-    plt.title('Target Linear Velocity [m/s]')
-    plt.grid()
-
-    plt.figure(4)
-    plt.xlabel('Time [s]')
-    plt.ylabel('Target Angular Velocity [rad/s]')
-    plt.legend()
-    plt.title('Target Angular Velocity [rad/s]]')
-    plt.grid()
-
-    plt.figure(5)
-    plt.xlabel('Time [s]')
-    plt.ylabel('Steering Angle [%]')
-    plt.legend()
-    plt.title('Steering Angle [%]')
-    plt.grid()
-
-    plt.figure(6)
-    plt.xlabel('Time [s]')
-    plt.ylabel('Torque [%]')
-    plt.legend()
-    plt.title('Torque [%]')
-    plt.grid()
-
+    
     plt.show()
 
 if __name__ == '__main__':
