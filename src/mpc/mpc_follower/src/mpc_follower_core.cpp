@@ -129,7 +129,7 @@ MPCFollower::MPCFollower()
   timer_control_ = nh_.createTimer(ros::Duration(ctrl_period_), &MPCFollower::timerCallback, this);
   std::string out_twist, out_vehicle_cmd, in_vehicle_status, in_waypoints, in_selfpose;
   pnh_.param("out_twist_name", out_twist, std::string("twist_raw"));
-  pnh_.param("out_vehicle_cmd_name", out_vehicle_cmd, std::string("ctrl_raw"));
+  pnh_.param("out_vehicle_cmd_name", out_vehicle_cmd, std::string("ctrl_cmd"));
   pnh_.param("in_waypoints_name", in_waypoints, std::string("base_waypoints"));
   pnh_.param("in_selfpose_name", in_selfpose, std::string("current_pose"));
   pnh_.param("in_vehicle_status_name", in_vehicle_status, std::string("vehicle_status"));
@@ -657,7 +657,7 @@ void MPCFollower::publishControlCommands(const double &vel_cmd, const double &ac
   {
     publishTwist(vel_cmd, omega_cmd);
   }
-  else if (output_interface_ == "ctrl_raw")
+  else if (output_interface_ == "ctrl_cmd")
   {
     publishCtrlCmd(vel_cmd, acc_cmd, steer_cmd);
   }
