@@ -21,6 +21,7 @@
 MPCFollower::MPCFollower()
     : nh_(""), pnh_("~"), my_position_ok_(false), my_velocity_ok_(false), my_steering_ok_(false)
 {
+  /* other parameters */
   pnh_.param("show_debug_info", show_debug_info_, bool(false));
   pnh_.param("ctrl_period", ctrl_period_, double(0.03));
   pnh_.param("enable_path_smoothing", enable_path_smoothing_, bool(true));
@@ -174,7 +175,7 @@ void MPCFollower::timerCallback(const ros::TimerEvent &te)
   double steer_vel_cmd = 0.0;
 
   /* solve MPC */
-  auto start = std::chrono::system_clock::now();
+  auto start = std::chrono::system_clock::now(); // record the start time of MPC calculation
   const bool mpc_solved = calculateMPC(vel_cmd, acc_cmd, steer_cmd, steer_vel_cmd);
   double elapsed_ms = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - start).count() * 1.0e-6; // A timer to measure the time of MPC calculation
   DEBUG_INFO("[MPC] timerCallback: MPC calculating time = %f [ms]\n", elapsed_ms);
@@ -314,8 +315,8 @@ bool MPCFollower::calculateMPC(double &vel_cmd, double &acc_cmd, double &steer_c
 
   /////////////// generate mpc matrix  ///////////////
   /*
-   * predict equation: Xec = Aex * x0 + Bex * Uex + Wex
-   * cost function: J = Xex' * Qex * Xex + (Uex - Uref)' * Rex * (Uex - Urefex)
+   * predict equation: Xex = Aex * x0 + Bex * Uex + Wex
+   * cost function: J = Xex' * Qex * Xex + (Uex - Urefex)' * Rex * (Uex - Urefex)
    * Qex = diag([Q,Q,...]), Rex = diag([R,R,...])
    */
 
@@ -401,7 +402,7 @@ bool MPCFollower::calculateMPC(double &vel_cmd, double &acc_cmd, double &steer_c
     vehicle_model_ptr_->calculateReferenceInput(Uref);
     if (std::fabs(Uref(0, 0)) < amathutils::deg2rad(mpc_param_.zero_ff_steer_deg))
     {
-      Uref(0, 0) = 0.0; // ignore curvature noise
+      Uref(0, 0) = 0.0; // ignore curvature noise to prevent small steering adjustments when the steering angle is zero
     }
 
     Urefex.block(i * DIM_U, 0, DIM_U, 1) = Uref;
@@ -584,7 +585,7 @@ void MPCFollower::callbackRefPath(const aslan_msgs::Lane::ConstPtr &msg)
   const double min_k = *min_element(traj.k.begin(), traj.k.end());
   DEBUG_INFO("[MPC] path callback: trajectory curvature : max_k = %f, min_k = %f", max_k, min_k);
 
-  /* add end point with vel=0 on traj for mpc prediction */
+  /* add end point with vel=0 on traj for mpc prediction to ensure vehicle comes to a stop at the end of trajectory */
   const double mpc_predict_time_length = (mpc_param_.prediction_horizon + 1) * mpc_param_.prediction_sampling_time + mpc_param_.delay_compensation_time + ctrl_period_;
   const double end_velocity = 0.0;
   traj.vx.back() = end_velocity; // also for end point
