@@ -7,6 +7,7 @@ find_package(
   autoware_build_flags
   autoware_health_checker
   autoware_msgs
+  aslan_msgs
   geometry_msgs
   qpoases_vendor
   roscpp
