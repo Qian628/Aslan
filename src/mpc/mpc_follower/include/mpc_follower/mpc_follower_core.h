@@ -51,6 +51,7 @@
 #include "mpc_follower/lowpass_filter.h"
 #include "mpc_follower/vehicle_model/vehicle_model_bicycle_kinematics.h"
 #include "mpc_follower/vehicle_model/vehicle_model_bicycle_dynamics.h"
+#include "mpc_follower/vehicle_model/vehicle_model_bicycle_dynamics_with_delay.h"
 #include "mpc_follower/vehicle_model/vehicle_model_bicycle_kinematics_no_delay.h"
 #include "mpc_follower/qp_solver/qp_solver_unconstr.h"
 #include "mpc_follower/qp_solver/qp_solver_unconstr_fast.h"

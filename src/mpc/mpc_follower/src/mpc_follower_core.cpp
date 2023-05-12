@@ -79,6 +79,20 @@ MPCFollower::MPCFollower()
     vehicle_model_ptr_ = std::make_shared<DynamicsBicycleModel>(wheelbase_, mass_fl, mass_fr, mass_rl, mass_rr, cf, cr);
     ROS_INFO("[MPC] set vehicle_model = dynamics");
   }
+  else if (vehicle_model_type_ == "dynamics_with_delay")
+  {
+    double steer_tau, mass_fl, mass_fr, mass_rl, mass_rr, cf, cr;
+    pnh_.param("vehicle_model_steer_tau", steer_tau, double(0.1));
+    pnh_.param("mass_fl", mass_fl, double(108.75)); // Assuming mass applied to each wheel are the same. Total mass of twizy is 435kg.
+    pnh_.param("mass_fr", mass_fr, double(108.75));
+    pnh_.param("mass_rl", mass_rl, double(108.75));
+    pnh_.param("mass_rr", mass_rr, double(108.75));
+    pnh_.param("cf", cf, double(155494.663));
+    pnh_.param("cr", cr, double(155494.663));
+
+    vehicle_model_ptr_ = std::make_shared<DynamicsBicycleModelWithDelay>(wheelbase_, steer_tau, mass_fl, mass_fr, mass_rl, mass_rr, cf, cr);
+    ROS_INFO("[MPC] set vehicle_model = dynamics_with_delay");
+  }
   else
   {
     ROS_ERROR("[MPC] vehicle_model_type is undefined");
@@ -269,6 +283,18 @@ bool MPCFollower::calculateMPC(double &vel_cmd, double &acc_cmd, double &steer_c
     dot_err_yaw = lpf_yaw_error_.filter(dot_err_yaw);
     DEBUG_INFO("[MPC] (after lpf) dot_err_lat = %f, dot_err_yaw = %f", dot_err_lat, dot_err_yaw);
     x0 << err_lat, dot_err_lat, yaw_err, dot_err_yaw;
+  }
+    else if (vehicle_model_type_ == "dynamics_with_delay")
+  {
+    double dot_err_lat = (err_lat - lateral_error_prev_) / ctrl_period_;
+    double dot_err_yaw = (yaw_err - yaw_error_prev_) / ctrl_period_;
+    DEBUG_INFO("[MPC] (before lpf) dot_err_lat = %f, dot_err_yaw = %f", dot_err_lat, dot_err_yaw);
+    lateral_error_prev_ = err_lat;
+    yaw_error_prev_ = yaw_err;
+    dot_err_lat = lpf_lateral_error_.filter(dot_err_lat);
+    dot_err_yaw = lpf_yaw_error_.filter(dot_err_yaw);
+    DEBUG_INFO("[MPC] (after lpf) dot_err_lat = %f, dot_err_yaw = %f", dot_err_lat, dot_err_yaw);
+    x0 << err_lat, dot_err_lat, yaw_err, dot_err_yaw, steer;
   }
   else
   {
