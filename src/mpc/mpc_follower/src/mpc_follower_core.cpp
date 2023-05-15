@@ -341,8 +341,8 @@ bool MPCFollower::calculateMPC(double &vel_cmd, double &acc_cmd, double &steer_c
 
   /////////////// generate mpc matrix  ///////////////
   /*
-   * predict equation: Xex = Aex * x0 + Bex * Uex + Wex
-   * cost function: J = Xex' * Qex * Xex + (Uex - Urefex)' * Rex * (Uex - Urefex)
+   * predict equation: Xex = Aex * x0 + Bex * Uex + Wex, Yex = Cex * Xex
+   * cost function: J = Yex' * Qex * Yex + (Uex - Urefex)' * Rex * (Uex - Urefex)
    * Qex = diag([Q,Q,...]), Rex = diag([R,R,...])
    */
 
@@ -455,9 +455,10 @@ bool MPCFollower::calculateMPC(double &vel_cmd, double &acc_cmd, double &steer_c
   }
 
   /////////////// optimization ///////////////
+  // this is very strange formulation of qp problem. it substitutes system state equation into cost function and leaving Uex as the only the optimsation variable .
   /*
    * solve quadratic optimization.
-   * cost function: 1/2 * Uex' * H * Uex + f' * Uex
+   * cost function: 1/2 * Uex' * H * U + f' * Uex
    */
   const Eigen::MatrixXd CB = Cex * Bex;
   const Eigen::MatrixXd QCB = Qex * CB;
@@ -467,7 +468,7 @@ bool MPCFollower::calculateMPC(double &vel_cmd, double &acc_cmd, double &steer_c
   H.triangularView<Eigen::Lower>() = H.transpose();
   Eigen::MatrixXd f = (Cex * (Aex * x0 + Wex)).transpose() * QCB - Urefex.transpose() * Rex;
 
-  /* constraint matrix : lb < U < ub, lbA < A*U < ubA */
+  /* constraint matrix : lb < Uex < ub, lbA < A*Uex < ubA */
   const double u_lim = amathutils::deg2rad(steer_lim_deg_); 
   Eigen::MatrixXd A = Eigen::MatrixXd::Zero(DIM_U * N, DIM_U * N);
   Eigen::MatrixXd lbA = Eigen::MatrixXd::Zero(DIM_U * N, 1);
