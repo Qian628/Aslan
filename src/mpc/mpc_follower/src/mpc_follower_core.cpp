@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+
 #include "mpc_follower/mpc_follower_core.h"
 
 #define DEBUG_INFO(...) { if (show_debug_info_) { ROS_INFO(__VA_ARGS__); }}
@@ -49,6 +50,7 @@ MPCFollower::MPCFollower()
   pnh_.param("delay_compensation_time", mpc_param_.delay_compensation_time, double(0.0));
 
   pnh_.param("steer_lim_deg", steer_lim_deg_, double(35.0));
+  pnh_.param("lateral_error_lim", lateral_error_lim_, double(0.1));
   pnh_.param("vehicle_model_wheelbase", wheelbase_, double(2.9));
 
   /* vehicle model setup */
@@ -190,7 +192,7 @@ void MPCFollower::timerCallback(const ros::TimerEvent &te)
 
   /* solve MPC */
   auto start = std::chrono::system_clock::now(); // record the start time of MPC calculation
-  const bool mpc_solved = calculateMPC(vel_cmd, acc_cmd, steer_cmd, steer_vel_cmd);
+  const bool mpc_solved = calculateMPC(vel_cmd, acc_cmd, steer_cmd, steer_vel_cmd, MPCOptimizationFormulation::Formulation1);
   double elapsed_ms = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - start).count() * 1.0e-6; // A timer to measure the time of MPC calculation
   DEBUG_INFO("[MPC] timerCallback: MPC calculating time = %f [ms]\n", elapsed_ms);
 
@@ -213,7 +215,7 @@ void MPCFollower::timerCallback(const ros::TimerEvent &te)
 /* This code defines a function called calculateMPC in the MPCFollower class. 
 It takes four reference arguments: vel_cmd, acc_cmd, steer_cmd, and steer_vel_cmd. 
 The function calculates the Model Predictive Control (MPC) commands for a vehicle, given the reference trajectory and vehicle model parameters.*/
-bool MPCFollower::calculateMPC(double &vel_cmd, double &acc_cmd, double &steer_cmd, double &steer_vel_cmd)
+bool MPCFollower::calculateMPC(double &vel_cmd, double &acc_cmd, double &steer_cmd, double &steer_vel_cmd, MPCOptimizationFormulation formulation)
 {
   const int N = mpc_param_.prediction_horizon;
   const double DT = mpc_param_.prediction_sampling_time;
@@ -453,45 +455,145 @@ bool MPCFollower::calculateMPC(double &vel_cmd, double &acc_cmd, double &steer_c
     ROS_WARN("[MPC] calculateMPC: model matrix includes NaN, stop MPC.");
     return false;
   }
+// solve quadratic optimization //
+const double u_lim = amathutils::deg2rad(steer_lim_deg_); 
+Eigen::VectorXd x_lim(DIM_X);
+x_lim(0) = lateral_error_lim_; 
+x_lim.tail(DIM_X - 1) = Eigen::VectorXd::Constant(DIM_X - 1, double(100));
+Eigen::VectorXd Uex;
+Eigen::VectorXd Zex;
 
-  /////////////// optimization ///////////////
-  // this is very strange formulation of qp problem. it substitutes system state equation into cost function and leaving Uex as the only the optimsation variable .
-  /*
-   * solve quadratic optimization.
-   * cost function: 1/2 * Uex' * H * U + f' * Uex
-   */
-  const Eigen::MatrixXd CB = Cex * Bex;
-  const Eigen::MatrixXd QCB = Qex * CB;
-  Eigen::MatrixXd H = Eigen::MatrixXd::Zero(DIM_U * N, DIM_U * N);
-  H.triangularView<Eigen::Upper>() = CB.transpose() * QCB; // NOTE: This calculation is very heavy. searching for a good way...
-  H.triangularView<Eigen::Upper>() += Rex;
-  H.triangularView<Eigen::Lower>() = H.transpose();
-  Eigen::MatrixXd f = (Cex * (Aex * x0 + Wex)).transpose() * QCB - Urefex.transpose() * Rex;
-
-  /* constraint matrix : lb < Uex < ub, lbA < A*Uex < ubA */
-  const double u_lim = amathutils::deg2rad(steer_lim_deg_); 
-  Eigen::MatrixXd A = Eigen::MatrixXd::Zero(DIM_U * N, DIM_U * N);
-  Eigen::MatrixXd lbA = Eigen::MatrixXd::Zero(DIM_U * N, 1);
-  Eigen::MatrixXd ubA = Eigen::MatrixXd::Zero(DIM_U * N, 1);
-  Eigen::VectorXd lb = Eigen::VectorXd::Constant(DIM_U * N, -u_lim); // applying min steering limit
-  Eigen::VectorXd ub = Eigen::VectorXd::Constant(DIM_U * N, u_lim);  // applying max steering limit
-
-  auto start = std::chrono::system_clock::now();
-  Eigen::VectorXd Uex;
-  if (!qpsolver_ptr_->solve(H, f.transpose(), A, lb, ub, lbA, ubA, Uex))
+  switch (formulation)
   {
-    ROS_WARN("[MPC] qp solver error");
-    return false;
-  }
-  double elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - start).count() * 1.0e-6;
-  DEBUG_INFO("[MPC] calculateMPC: qp solver calculation time = %f [ms]", elapsed);
+    case MPCOptimizationFormulation::Formulation1:
+      {/////////////// qp formulation 1 ///////////////
+        /*this is very strange formulation of qp problem. it substitutes prediction equation into cost function 
+        and leaving Uex as the only the optimsation variable*/ 
+        /* cost function: 1/2 * Uex' * H * Uex + f' * Uex
+        * H = (Cex * Bex)' * Qex * (Cex * Bex) + Rex
+        * f' = (Cex * (Aex * x0 + Wex))' * Qex * (Cex * Bex) - Urefex' * Rex
+        */
+        const Eigen::MatrixXd CB = Cex * Bex;
+        const Eigen::MatrixXd QCB = Qex * CB;
+        Eigen::MatrixXd H = Eigen::MatrixXd::Zero(DIM_U * N, DIM_U * N);
+        H.triangularView<Eigen::Upper>() = CB.transpose() * QCB; // NOTE: This calculation is very heavy. searching for a good way...
+        H.triangularView<Eigen::Upper>() += Rex;
+        H.triangularView<Eigen::Lower>() = H.transpose();
+        Eigen::MatrixXd f = (Cex * (Aex * x0 + Wex)).transpose() * QCB - Urefex.transpose() * Rex;
 
-  if (Uex.array().isNaN().any())
-  {
-    ROS_WARN("[MPC] calculateMPC: model Uex includes NaN, stop MPC. ");
-    return false;
-  }
+        /* constraint matrix : lb < Uex < ub, lbA <  A * Uex < ubA
+        * lb = [-u_lim; -u_lim; ... ; -u_lim]
+        * ub = [u_lim; u_lim; ... ; u_lim]
+        * A = Bex
+        * lbA = [-x_lim; -x_lim; ... ; -x_lim] - Aex * x0 - Wex
+        * ubA = [x_lim; x_lim; ... ; x_lim] - Aex * x0 - Wex 
+        */
+        //Eigen::MatrixXd A = Eigen::MatrixXd::Zero(DIM_U * N, DIM_U * N);
+        //Eigen::MatrixXd lbA = Eigen::MatrixXd::Zero(DIM_U * N, 1);
+        //Eigen::MatrixXd ubA = Eigen::MatrixXd::Zero(DIM_U * N, 1);
+        Eigen::MatrixXd A = Bex;
+        Eigen::VectorXd lbA = Eigen::VectorXd::Zero(DIM_X * N);
+        Eigen::VectorXd ubA = Eigen::VectorXd::Zero(DIM_X * N);
 
+          for (int i = 0; i < N; ++i) 
+          {
+            lbA.block(i * DIM_X, 0, DIM_X, 1) = -x_lim;
+            ubA.block(i * DIM_X, 0, DIM_X, 1) = x_lim;
+          }
+        lbA -= Aex * x0 + Wex;
+        ubA -= Aex * x0 + Wex;
+        Eigen::VectorXd lb = Eigen::VectorXd::Constant(DIM_U * N, -u_lim); // applying min steering limit
+        Eigen::VectorXd ub = Eigen::VectorXd::Constant(DIM_U * N, u_lim);  // applying max steering limit
+        
+        auto start = std::chrono::system_clock::now();
+        if (!qpsolver_ptr_->solve(H, f.transpose(), A, lb, ub, lbA, ubA, Uex))
+        {
+          ROS_WARN("[MPC] qp solver error");
+          return false;
+        }
+        double elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - start).count() * 1.0e-6;
+        DEBUG_INFO("[MPC] calculateMPC: qp solver calculation time = %f [ms]", elapsed);
+
+        if (Uex.array().isNaN().any())
+        {
+          ROS_WARN("[MPC] calculateMPC: model Uex includes NaN, stop MPC. ");
+          return false;
+        }
+      }     
+      break;
+      
+    case MPCOptimizationFormulation::Formulation2:
+      {/////////////// qp formulation 2 ///////////////
+          /*Reformulate the qp optimisation such that it is possible 
+          to apply constrain on laterel error*/ 
+          /* solve quadratic optimization.
+          * cost function: 1/2 * Zex' * H * Zex + f' * Zex, Zex = [Xex; Uex]
+          * H = [Cex' * Qex * Cex 0
+          *       0              Rex]
+          * f' = [0; -Uref' * Rex] 
+          */
+          Eigen::MatrixXd H = Eigen::MatrixXd::Zero(DIM_X * N + DIM_U * N, DIM_X * N + DIM_U * N);
+          H.block(0, 0, DIM_X * N, DIM_X * N) = Cex.transpose() * Qex * Cex;
+          H.block(DIM_X * N, DIM_X * N, DIM_U * N, DIM_U * N) = Rex;
+          Eigen::RowVectorXd f = Eigen::RowVectorXd::Zero(DIM_X * N + DIM_U * N);
+          f.tail(DIM_U * N) = -Urefex.transpose() * Rex;
+          /* constraint matrix : lb < Zex < ub, lbA = A*Zex = ubA
+          * A = [-I, Bex]
+          * lbA = -Aex * x0 - Wex
+          * ubA = lbAeq
+          * lb = [-xlim; -xlim; ... ; -xlim; -u_lim; -u_lim; ... ; -u_lim]
+          * ub = [xlim; xlim; ... ; xlim; u_lim; u_lim; ... ; u_lim]
+          */
+          Eigen::MatrixXd A = Eigen::MatrixXd::Zero(DIM_X * N, DIM_X * N + DIM_U * N);
+          A.block(0, 0, DIM_X * N, DIM_X * N) = Eigen::MatrixXd::Identity(DIM_X * N, DIM_X * N);
+          A.block(0, DIM_X * N, DIM_X * N, DIM_U * N) = -Bex;
+
+
+          Eigen::VectorXd lbA = Aex * x0 + Wex;
+          Eigen::VectorXd ubA = lbA;
+
+          Eigen::VectorXd lb = Eigen::VectorXd::Zero(DIM_X * N + DIM_U * N);
+          Eigen::VectorXd ub = Eigen::VectorXd::Zero(DIM_X * N + DIM_U * N);
+
+          for (int i = 0; i < N; ++i) 
+          {
+            lb.block(i * DIM_X, 0, DIM_X, 1) = -x_lim;
+            ub.block(i * DIM_X, 0, DIM_X, 1) = x_lim;
+          }
+          lb.tail(DIM_U * N) = Eigen::VectorXd::Constant(DIM_U * N, -u_lim);
+          ub.tail(DIM_U * N) = Eigen::VectorXd::Constant(DIM_U * N, u_lim);
+
+          auto start = std::chrono::system_clock::now();
+          if (!qpsolver_ptr_->solve(H, f.transpose(), A, lb, ub, lbA, ubA, Zex))
+          {
+            ROS_WARN("[MPC] qp solver error");
+            return false;
+          }
+          double elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - start).count() * 1.0e-6;
+          DEBUG_INFO("[MPC] calculateMPC: qp solver calculation time = %f [ms]", elapsed);
+
+          if (Zex.array().isNaN().any())
+          {
+            ROS_WARN("[MPC] calculateMPC: model Zex includes NaN, stop MPC. ");
+            return false;
+          }
+          Uex = Zex.tail(DIM_U * N);
+      }   
+      break;
+
+        // Use the empc_solution_pQP1_KinematicsBicycleModelWithDelay_7_0_1 function in the Formulation3 case
+  case MPCOptimizationFormulation::Formulation3: 
+       {
+          Solution solution = empc_solution_pQP1_KinematicsBicycleModelWithDelay_7_0_1(x0);
+          Eigen::VectorXd Uex_empc = solution.z;
+       }
+      break;
+    default:
+      {
+                ROS_WARN("[MPC] calculateMPC: Unknown optimization formulation.");
+                return false;
+      }
+    }
   /* saturation */
   const double u_sat = std::max(std::min(Uex(0), u_lim), -u_lim);
 

@@ -56,7 +56,7 @@
 #include "mpc_follower/qp_solver/qp_solver_unconstr.h"
 #include "mpc_follower/qp_solver/qp_solver_unconstr_fast.h"
 #include "mpc_follower/qp_solver/qp_solver_qpoases.h"
-
+#include "mpc_follower/qp_solver/empc_solution.h"
 /** 
  * @class MPC-based waypoints follower class
  * @brief calculate control command to follow reference waypoints
@@ -101,6 +101,7 @@ private:
   double admisible_position_error_; //!< @brief stop MPC calculation when lateral error is large than this value [m]
   double admisible_yaw_error_deg_;  //!< @brief stop MPC calculation when heading error is large than this value [deg]
   double steer_lim_deg_;            //!< @brief steering command limit [rad]
+  double lateral_error_lim_;      //!< @brief lateral error limit [m]
   double wheelbase_;                //!< @brief vehicle wheelbase length [m] to convert steering angle to angular velocity
 
   /* parameters for path smoothing */
@@ -198,7 +199,15 @@ private:
    * @param [out] steer_cmd steering command
    * @param [out] steer_vel_cmd steering rotation speed command
    */
-  bool calculateMPC(double &vel_cmd, double &acc_cmd, double &steer_cmd, double &steer_vel_cmd);
+
+  enum class MPCOptimizationFormulation 
+  {
+    Formulation1,
+    Formulation2,
+    Formulation3
+  };
+
+  bool calculateMPC(double &vel_cmd, double &acc_cmd, double &steer_cmd, double &steer_vel_cmd, MPCOptimizationFormulation formulation);
 
   /* debug */
   bool show_debug_info_;      //!< @brief flag to display debug info
