@@ -23,6 +23,7 @@ def plot_trajectory_from_rosbag(file_path):
     angular_vel = []
     steer = []
     torque = []
+    steering_angle_cmd= []
     steering_angle = []
     print("Reading messages from rosbag...")
     for topic, msg, t in bag.read_messages():
@@ -33,11 +34,15 @@ def plot_trajectory_from_rosbag(file_path):
             speed.append(msg.twist.linear.x)
             time_current_velocity.append(msg.header.stamp.to_sec())
         elif topic == '/twist_cmd' and msg._type == 'geometry_msgs/TwistStamped':
+            angular_vel_deg= msg.twist.angular.z* (180.0 / math.pi)
             linear_vel.append(msg.twist.linear.x)
-            angular_vel.append(msg.twist.angular.z)
+            angular_vel.append(angular_vel_deg)
             time_twist_cmd.append(msg.header.stamp.to_sec())  # Add this line
         elif topic == '/ctrl_cmd' and msg._type == 'aslan_msgs/ControlCommandStamped':
-            steering_angle_deg = msg.cmd.steering_angle * (180.0 / math.pi)
+            steering_angle_deg_cmd = msg.cmd.steering_angle * (180.0 / math.pi)
+            steering_angle_cmd.append(steering_angle_deg_cmd)
+        elif topic == '/vehicle_status' and msg._type == 'autoware_msgs/VehicleStatus':
+            steering_angle_deg = msg.angle * (180.0 / math.pi)
             steering_angle.append(steering_angle_deg)
         elif topic == '/sd_control' and msg._type == 'aslan_msgs/SDControl':
             steer.append(msg.steer)
@@ -66,9 +71,9 @@ def plot_trajectory_from_rosbag(file_path):
     plt.figure(3)
     plt.plot(time_twist_cmd, angular_vel, label='Target Angular Velocity')
     plt.xlabel('Time [s]')
-    plt.ylabel('Target Angular Velocity [rad/s]')
+    plt.ylabel('Target Angular Velocity [deg/s]')
     plt.legend()
-    plt.title('Target Angular Velocity [rad/s]')
+    plt.title('Target Angular Velocity [deg/s]')
     plt.grid()
 
     plt.figure(4)
@@ -88,8 +93,14 @@ def plot_trajectory_from_rosbag(file_path):
     plt.grid()
 
     plt.figure(6)
-    plt.plot(steering_angle, label='Steering Angle [deg]') 
-    plt.xlabel('Time [s]')
+    plt.plot(steering_angle, label='Actual Steering Angle [deg]')
+    plt.ylabel('Steering Angle [deg]')
+    plt.legend()
+    plt.title('Steering Angle [deg]')
+    plt.grid()
+
+    plt.figure(7)
+    plt.plot(steering_angle_cmd, label='Command Steering Angle [deg]') 
     plt.ylabel('Steering Angle [deg]')
     plt.legend()
     plt.title('Steering Angle [deg]')
@@ -114,7 +125,10 @@ def save_plots(output_folder):
     plt.savefig("{}/torque.png".format(output_folder))
 
     plt.figure(6)
-    plt.savefig("{}/steering_angle_degree.png".format(output_folder))
+    plt.savefig("{}/actual_steering_angle_degree.png".format(output_folder))
+
+    plt.figure(7)
+    plt.savefig("{}/cmd_steering_angle_degree.png".format(output_folder))
 def main():
     parser = argparse.ArgumentParser(description='Plot and compare reference and executed lane change trajectories.')
     parser.add_argument('--csv', type=str, required=True, help='Path to the reference trajectory CSV file.')
