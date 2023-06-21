@@ -19,6 +19,10 @@
 
 #define DEBUG_INFO(...) { if (show_debug_info_) { ROS_INFO(__VA_ARGS__); }}
 
+// Function Declarations
+Eigen::MatrixXd read_csv_to_matrix(const std::string& filename);
+std::vector<double> read_csv_to_vector_double(const std::string& filename);
+std::vector<int> read_csv_to_vector_int(const std::string& filename);
 MPCFollower::MPCFollower()
     : nh_(""), pnh_("~"), my_position_ok_(false), my_velocity_ok_(false), my_steering_ok_(false)
 {
@@ -581,11 +585,31 @@ Eigen::VectorXd Zex;
       }   
       break;
 
-        // Use the empc_solution_pQP1_KinematicsBicycleModelWithDelay_7_0_1 function in the Formulation3 case
   case MPCOptimizationFormulation::Formulation3: 
        {
-          Solution solution = empc_solution_pQP1_KinematicsBicycleModelWithDelay_7_0_1(x0);
-          Eigen::VectorXd Uex_empc = solution.z;
+         // Load the matrix data from the CSV files
+            Eigen::MatrixXd H = read_csv_to_matrix("/home/qian/Aslan/src/mpc/mpc_follower/src/empc_data/H.csv");
+            std::vector<int> ni = read_csv_to_vector_int("/home/qian/Aslan/src/mpc/mpc_follower/src/empc_data/ni.csv");
+            Eigen::MatrixXd fF = read_csv_to_matrix("/home/qian/Aslan/src/mpc/mpc_follower/src/empc_data/fF.csv");
+            Eigen::MatrixXd tF = read_csv_to_matrix("/home/qian/Aslan/src/mpc/mpc_follower/src/empc_data/tF.csv");
+            std::vector<double> tg = read_csv_to_vector_double("/home/qian/Aslan/src/mpc/mpc_follower/src/empc_data/tg.csv");
+            Eigen::MatrixXd tH = read_csv_to_matrix("/home/qian/Aslan/src/mpc/mpc_follower/src/empc_data/tH.csv");
+            Eigen::MatrixXd fg = read_csv_to_matrix("/home/qian/Aslan/src/mpc/mpc_follower/src/empc_data/fg.csv");
+
+            Eigen::Vector3d vec(0,0,1);   // vector [0;0;1]
+            double scale_factor = Uref(0,0);
+            Eigen::Vector3d result = scale_factor * vec;
+            Eigen::Vector3d delta_x0 = x0 - result;
+            std::cout << "delta_x0: " << delta_x0 << std::endl;
+            std::cout << "x0:" << x0 << std::endl;
+            Solution solution = empc_solution_pQP1_ff_KinematicsBicycleModelWithDelay_7_0_1(delta_x0, H, ni, fF, tF, tg, tH, fg);
+            Eigen::VectorXd delta_Uex = solution.z;
+            int index_i = solution.i;
+            Uex = Urefex + delta_Uex;
+            std::cout << "index_i: " << index_i << std::endl;
+            std::cout << "Uex(0): " << Uex(0) << std::endl;
+            std::cout << "Urefex(0): " << Urefex(0) << std::endl;
+            std::cout << "delta_Uex(0): " << delta_Uex(0) << std::endl;
        }
       break;
     default:
@@ -839,3 +863,56 @@ MPCFollower::~MPCFollower()
     steer_cmd = vehicle_status_.tire_angle_rad;
   publishControlCommands(vel_cmd, acc_cmd, steer_cmd, steer_vel_cmd);
 };
+
+Eigen::MatrixXd read_csv_to_matrix(const std::string &path) {
+    std::ifstream inFile(path);
+    std::vector<double> vals;
+    int rows = 0;
+    std::string line;
+    
+    while (std::getline(inFile, line)) {
+        std::stringstream ss(line);
+        std::string val;
+        
+        while(std::getline(ss, val, ',')) {
+            vals.push_back(stod(val));
+        }
+        ++rows;
+    }
+    
+    return Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(vals.data(), rows, vals.size()/rows);
+}
+
+
+std::vector<double> read_csv_to_vector_double(const std::string &path) {
+    std::ifstream inFile(path);
+    std::vector<double> vals;
+    std::string line, val;
+    
+    while (std::getline(inFile, line)) {
+        std::stringstream ss(line);
+        
+        while(std::getline(ss, val, ',')) {
+            vals.push_back(stod(val));
+        }
+    }
+    
+    return vals;
+}
+
+std::vector<int> read_csv_to_vector_int(const std::string &path) {
+    std::ifstream inFile(path);
+    std::vector<int> vals;
+    std::string line, val;
+    
+    while (std::getline(inFile, line)) {
+        std::stringstream ss(line);
+        
+        while(std::getline(ss, val, ',')) {
+            vals.push_back(stod(val));
+        }
+    }
+    
+    return vals;
+}
+
