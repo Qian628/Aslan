@@ -3,7 +3,7 @@
   <arg name="ns" default="/"/>
   <arg name="show_debug_info" default="false" doc="flag to display debug info" />
   <arg name="ctrl_period" default="0.03" doc="control period [s]"/>
-  <arg name="traj_resample_dist" default="0.1" doc="ath resampling interval [m]"/>
+  <arg name="traj_resample_dist" default="0.1" doc="path resampling interval [m]"/>
   <arg name="enable_yaw_recalculation" default="true" doc="flag for recalculation of yaw angle after resampling"/>
   <arg name="admisible_position_error" default="5.0" doc="stop mpc calculation when error is larger than the following value"/>
   <arg name="admisible_yaw_error_deg" default="90.0" doc="stop mpc calculation when error is larger than the following value"/>
@@ -12,29 +12,36 @@
   <arg name="path_filter_moving_ave_num" default="35" doc="param of moving average filter for path smoothing "/>
   <arg name="curvature_smoothing_num" default="35" doc="point-to-point index distance used in curvature calculation : curvature is calculated from three points p(i-num), p(i), p(i+num)"/>
   <arg name="steering_lpf_cutoff_hz" default="3.0" doc="cutoff frequency of lowpass filter for steering command [Hz]"/>
-  <arg name="qp_solver_type" default="unconstraint_fast" doc="optimization solver type. option is unconstraint_fast, unconstraint, and qpoases_hotstart"/>
+  <arg name="qp_solver_type" default="qpoases_hotstart" doc="optimization solver type. option is unconstraint_fast, unconstraint, and qpoases_hotstart"/>
+  <arg name="qp_formulation_type" default="EMPC" doc="quadratic programming formulation type. option is OnlineMPC and EMPC (when choosing EMPC, it doesn't matter what vehicle model and what optimisation solver are chosen)"/>
   <arg name="qpoases_max_iter" default="500" doc="max iteration number for quadratic programming"/>
-  <arg name="vehicle_model_type" default="kinematics" doc="vehicle model type for mpc prediction. option is kinematics, kinematics_no_delay, and dynamics"/>
+  <arg name="vehicle_model_type" default="kinematics" doc="vehicle model type for mpc prediction. option is kinematics, kinematics_no_delay, dynamics and dynamics_with_delay"/>
 
   <!-- MPC design parameters -->
   <arg name="mpc_prediction_horizon" default="70" doc="prediction horizon step"/>
   <arg name="mpc_prediction_sampling_time" default="0.1" doc="prediction horizon period [s]"/>
   <arg name="mpc_weight_lat_error" default="0.1" doc="lateral error weight in matrix Q"/>
   <arg name="mpc_weight_heading_error" default="0.0" doc="heading error weight in matrix Q"/>
-  <arg name="mpc_weight_heading_error_squared_vel_coeff" default="0.3" doc="heading error * velocity weight in matrix Q"/>
+  <arg name="mpc_weight_heading_error_squared_vel_coeff" default="0.0" doc="heading error * velocity weight in matrix Q"/>
   <arg name="mpc_weight_steering_input" default="1.0" doc="steering error weight in matrix R"/>
-  <arg name="mpc_weight_steering_input_squared_vel_coeff" default="0.25" doc="steering error * velocity weight in matrix R"/>
+  <arg name="mpc_weight_steering_input_squared_vel_coeff" default="0" doc="steering error * velocity weight in matrix R"/>
   <arg name="mpc_weight_lat_jerk" default="0.0" doc="lateral jerk weight in matrix R"/>
-  <arg name="mpc_weight_terminal_lat_error" default="1.0" doc="terminal lateral error weight in matrix Q to improve mpc stability"/>
-  <arg name="mpc_weight_terminal_heading_error" default="0.1" doc="terminal heading error weight in matrix Q to improve mpc stability"/>
+  <arg name="mpc_weight_terminal_lat_error" default="0.1" doc="terminal lateral error weight in matrix Q to improve mpc stability"/>
+  <arg name="mpc_weight_terminal_heading_error" default="0" doc="terminal heading error weight in matrix Q to improve mpc stability"/>
   <arg name="mpc_zero_ff_steer_deg" default="2.0" doc="threshold that feed-forward angle becomes zero"/>
   <arg name="delay_compensation_time" default="0.0" doc="steering input delay time for delay compensation"/>
 
   <arg name="vehicle_model_steer_tau" default="0.3" doc="steering dynamics time constant (1d approzimation) [s]"/>
   <arg name="vehicle_model_wheelbase" default="1.686" doc="wheel base length [m]"/>
   <arg name="steer_lim_deg" default="40.0" doc="steering angle limit [deg]"/>
+  <arg name="lateral_error_lim" default="1" doc="lateral deviation limit [m]"/>
   <arg name="steering_gear_ratio" default="20.0" doc="steering gear ratio"/>
-
+  <arg name="mass_fl" default="108.75 " doc="mass applied to front left tire [kg]  "/>
+  <arg name="mass_fr" default="108.75 " doc="mass applied to front right tire [kg]  "/>
+  <arg name="mass_rl" default="108.75 " doc="mass applied to rear left tire [kg]  "/>
+  <arg name="mass_rr" default="108.75 " doc="mass applied to rear right tire [kg]  "/>
+  <arg name="cf" default="155494.663 " doc="front cornering power [N/rad] "/>
+  <arg name="cr" default="155494.663 " doc="rear cornering power [N/rad] "/>
   <group ns="$(arg ns)">
 
     <node pkg="mpc_follower" type="mpc_waypoints_converter" name="mpc_waypoints_converter" output="screen"/>
@@ -47,7 +54,7 @@
       <param name="in_vehicle_status_name" value="/vehicle_status"/>
       <param name="in_selfpose_name" value="/current_pose"/>
       <param name="out_twist_name" value="/twist_raw"/>
-      <param name="out_vehicle_cmd_name" value="/ctrl_raw"/>
+      <param name="out_vehicle_cmd_name" value="/ctrl_cmd"/>
 
       <!-- paramters -->
       <param name="ctrl_period" value="$(arg ctrl_period)"/>
@@ -61,6 +68,7 @@
       <param name="path_filter_moving_ave_num" value="$(arg path_filter_moving_ave_num)"/>
       <param name="curvature_smoothing_num" value="$(arg curvature_smoothing_num)"/>
       <param name="steering_lpf_cutoff_hz" value="$(arg steering_lpf_cutoff_hz)"/>
+      <param name="qp_formulation_type" value="$(arg qp_formulation_type)"/>
       <param name="qp_solver_type" value="$(arg qp_solver_type)"/>
       <param name="qpoases_max_iter" value="$(arg qpoases_max_iter)"/>
       <param name="vehicle_model_type" value="$(arg vehicle_model_type)"/>
@@ -80,6 +88,12 @@
       <param name="vehicle_model_wheelbase" value="$(arg vehicle_model_wheelbase)"/>
       <param name="steer_lim_deg" value="$(arg steer_lim_deg)"/>
       <param name="steering_gear_ratio" value="$(arg steering_gear_ratio)"/>
+      <param name="cf" value="$(arg cf)"/>
+      <param name="cr" value="$(arg cr)"/>
+      <param name="mass_fl" value="$(arg mass_fl)"/>
+      <param name="mass_fr" value="$(arg mass_fr)"/>
+      <param name="mass_rl" value="$(arg mass_rl)"/>
+      <param name="mass_rr" value="$(arg mass_rr)"/>
     </node>
 
   </group>

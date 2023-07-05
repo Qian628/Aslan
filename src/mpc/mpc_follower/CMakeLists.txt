@@ -7,6 +7,7 @@ find_package(
   autoware_build_flags
   autoware_health_checker
   autoware_msgs
+  aslan_msgs
   geometry_msgs
   qpoases_vendor
   roscpp
@@ -39,6 +40,7 @@ set(
     src/qp_solver/qp_solver_unconstr.cpp
     src/qp_solver/qp_solver_unconstr_fast.cpp
     src/qp_solver/qp_solver_qpoases.cpp
+    src/qp_solver/empc_solution.cpp
 )
 
 add_executable(mpc_follower src/mpc_follower_node.cpp src/mpc_follower_core.cpp ${MPC_FOLLOWER_SRC})

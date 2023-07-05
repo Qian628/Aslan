@@ -27,6 +27,8 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TwistStamped.h>
 #include <amathutils_lib/amathutils.hpp>
+#include <fstream>
+#include <sstream>
 
 #include "mpc_follower/mpc_trajectory.h"
 
@@ -147,5 +149,33 @@ bool calcNearestPose(const MPCTrajectory &traj, const geometry_msgs::Pose &self_
  */
 bool calcNearestPoseInterp(const MPCTrajectory &traj, const geometry_msgs::Pose &self_pose, geometry_msgs::Pose &nearest_pose,
                            unsigned int &nearest_index, double &min_dist_error, double &nearest_yaw_error, double &nearest_time);
+
+/**
+ * @brief Read a CSV file and convert to Eigen Matrix
+ * @param [in] path file path to the CSV
+ * @return An Eigen Matrix containing the CSV data
+ */
+Eigen::MatrixXd read_csv_to_matrix(const std::string &path);
+
+/**
+ * @brief Read a CSV file and convert to a vector of doubles
+ * @param [in] path file path to the CSV
+ * @return A vector of doubles containing the CSV data
+ */
+std::vector<double> read_csv_to_vector_double(const std::string &path);
+
+/**
+ * @brief Read a CSV file and convert to a vector of integers
+ * @param [in] path file path to the CSV
+ * @return A vector of integers containing the CSV data
+ */
+std::vector<int> read_csv_to_vector_int(const std::string &path);
+
+/**
+ * @brief Read a CSV file and convert to a integer
+ * @param [in] path file path to the CSV
+ * @return A integer containing the CSV data
+ */
+int read_csv_to_int(const std::string &path);
 
 }; // namespace MPCUtils

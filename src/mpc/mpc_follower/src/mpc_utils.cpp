@@ -486,3 +486,68 @@ bool MPCUtils::calcNearestPoseInterp(const MPCTrajectory &traj, const geometry_m
   nearest_yaw_error = amathutils::normalizeRadian(my_yaw - nearest_yaw);
   return true;
 }
+
+Eigen::MatrixXd MPCUtils::read_csv_to_matrix(const std::string &path) {
+    std::ifstream inFile(path);
+    std::vector<double> vals;
+    int rows = 0;
+    std::string line;
+    
+    while (std::getline(inFile, line)) {
+        std::stringstream ss(line);
+        std::string val;
+        
+        while(std::getline(ss, val, ',')) {
+            vals.push_back(stod(val));
+        }
+        ++rows;
+    }
+    
+    return Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(vals.data(), rows, vals.size()/rows);
+}
+
+
+std::vector<double> MPCUtils::read_csv_to_vector_double(const std::string &path) {
+    std::ifstream inFile(path);
+    std::vector<double> vals;
+    std::string line, val;
+    
+    while (std::getline(inFile, line)) {
+        std::stringstream ss(line);
+        
+        while(std::getline(ss, val, ',')) {
+            vals.push_back(stod(val));
+        }
+    }
+    
+    return vals;
+}
+
+std::vector<int> MPCUtils::read_csv_to_vector_int(const std::string &path) {
+    std::ifstream inFile(path);
+    std::vector<int> vals;
+    std::string line, val;
+    
+    while (std::getline(inFile, line)) {
+        std::stringstream ss(line);
+        
+        while(std::getline(ss, val, ',')) {
+            vals.push_back(stod(val));
+        }
+    }
+    
+    return vals;
+}
+
+int MPCUtils::read_csv_to_int(const std::string &path) {
+    std::ifstream inFile(path);
+    std::string line;
+    int value = 0;
+
+    if (std::getline(inFile, line)) {
+        std::stringstream ss(line);
+        ss >> value;
+    }
+
+    return value;
+}
