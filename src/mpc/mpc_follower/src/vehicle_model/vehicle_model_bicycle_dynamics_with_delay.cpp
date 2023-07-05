@@ -51,13 +51,13 @@ void DynamicsBicycleModelWithDelay::calculateDiscreteMatrix(Eigen::MatrixXd &Ad,
     Ad(1, 1) = -(cf_ + cr_) / (mass_ * vel);
     Ad(1, 2) = (cf_ + cr_) / mass_;
     Ad(1, 3) = (lr_ * cr_ - lf_ * cf_) / (mass_ * vel);
-    Ad(1, 4) = cf_ / mass_
+    Ad(1, 4) = cf_ / mass_;
     Ad(2, 3) = 1.0;
     Ad(3, 1) = (lr_ * cr_ - lf_ * cf_) / (iz_ * vel);
     Ad(3, 2) = (lf_ * cf_ - lr_ * cr_) / iz_;
     Ad(3, 3) = -(lf_ * lf_ * cf_ + lr_ * lr_ * cr_) / (iz_ * vel);
     Ad(3, 4) = lf_ * cf_ / iz_;
-    Ad(4, 4) = -1.0/ steer_tau;
+    Ad(4, 4) = -1.0/ steer_tau_;
     
 
     Eigen::MatrixXd I = Eigen::MatrixXd::Identity(dim_x_, dim_x_);
@@ -70,7 +70,7 @@ void DynamicsBicycleModelWithDelay::calculateDiscreteMatrix(Eigen::MatrixXd &Ad,
     Bd(1, 0) = 0.0;
     Bd(2, 0) = 0.0;
     Bd(3, 0) = 0.0;
-    Bd(4, 0) = 1.0 / steer_tau;
+    Bd(4, 0) = 1.0 / steer_tau_;
 
     Wd = Eigen::MatrixXd::Zero(dim_x_, 1);
     Wd(0, 0) = 0.0;
