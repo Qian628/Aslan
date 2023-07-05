@@ -91,7 +91,9 @@ private:
   aslan_msgs::Lane current_waypoints_;                    //!< @brief current waypoints to be followed
   std::shared_ptr<VehicleModelInterface> vehicle_model_ptr_; //!< @brief vehicle model for MPC
   std::string vehicle_model_type_;                           //!< @brief vehicle model type for MPC
-  std::shared_ptr<QPSolverInterface> qpsolver_ptr_;          //!< @brief qp solver for MPC
+  std::string qp_formulation_type_;                          //!< @brief the mpc type: online or explicit
+  std::shared_ptr<QPSolverInterface> qpsolver_ptr1_;          //!< @brief qp solver for MPC formulation 1
+  std::shared_ptr<QPSolverInterface> qpsolver_ptr2_;          //!< @brief qp solver for MPC formulation 2
   std::string output_interface_;                             //!< @brief output command type
   std::deque<double> input_buffer_;                          //!< @brief control input (mpc_output) buffer for delay time conpemsation
 
@@ -138,6 +140,20 @@ private:
   };
   VehicleStatus vehicle_status_; //< @brief vehicle status
 
+  struct EMPCData 
+  {
+    Eigen::MatrixXd H;
+    std::vector<int> ni;
+    Eigen::MatrixXd fF;
+    Eigen::MatrixXd tF;
+    std::vector<double> tg;
+    Eigen::MatrixXd tH;
+    Eigen::MatrixXd fg;
+    int nz;
+    int nr;
+  };
+  EMPCData empc_data_;   //< @brief data for EMPC
+  
   double steer_cmd_prev_;     //< @brief steering command calculated in previous period
   double lateral_error_prev_; //< @brief previous lateral error for derivative
   double yaw_error_prev_;     //< @brief previous lateral error for derivative
@@ -200,15 +216,7 @@ private:
    * @param [out] steer_vel_cmd steering rotation speed command
    */
 
-  enum class MPCOptimizationFormulation 
-  {
-    Formulation1,
-    Formulation2,
-    Formulation3
-  };
-
-  bool calculateMPC(double &vel_cmd, double &acc_cmd, double &steer_cmd, double &steer_vel_cmd, MPCOptimizationFormulation formulation);
-
+ 
   /* debug */
   bool show_debug_info_;      //!< @brief flag to display debug info
 
@@ -216,9 +224,20 @@ private:
   ros::Publisher pub_debug_predicted_traj_;       //!< @brief publisher for debug info
   ros::Publisher pub_debug_values_;               //!< @brief publisher for debug info
   ros::Publisher pub_debug_mpc_calc_time_;        //!< @brief publisher for debug info
-
   ros::Subscriber sub_estimate_twist_;         //!< @brief subscriber for /estimate_twist for debug
   geometry_msgs::TwistStamped estimate_twist_; //!< @brief received /estimate_twist for debug
+ 
+ /**
+   * @brief calculate control command by MPC algorithm
+   * @param [out] vel_cmd velocity command
+   * @param [out] acc_cmd acceleration command
+   * @param [out] steer_cmd steering command
+   * @param [out] steer_vel_cmd steering rotation speed command
+   * @param [in] formulation MPC optimization formulation
+   * @param [in] empc_data MPC optimization formulation
+   */
+  bool calculateMPC(double &vel_cmd, double &acc_cmd, double &steer_cmd, double &steer_vel_cmd, const std::string &formulation, const EMPCData &empc_data);
+
 
   /**
    * @brief convert MPCTraj to visualizaton marker for visualization
@@ -229,5 +248,5 @@ private:
   /**
    * @brief callback for estimate twist for debug
    */
-  void callbackEstimateTwist(const geometry_msgs::TwistStamped &msg) { estimate_twist_ = msg; }
+  void callbackEstimateTwist(const geometry_msgs::TwistStamped &msg) { estimate_twist_ = msg;};
 };

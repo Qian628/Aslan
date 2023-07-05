@@ -14,11 +14,13 @@ struct Solution {
     int i;
 };
 
-Solution empc_solution_pQP1_ff_KinematicsBicycleModelWithDelay_7_0_1(const Eigen::VectorXd& x,
+Solution empc_solution_pQP1_ff_KinematicsBicycleModelWithDelay(const Eigen::VectorXd& x,
                                                                    const Eigen::MatrixXd& H,
                                                                    const std::vector<int>& ni,
                                                                    const Eigen::MatrixXd& fF,
                                                                    const Eigen::MatrixXd& tF,
                                                                    const std::vector<double>& tg,
                                                                    const Eigen::MatrixXd& tH,
-                                                                   const Eigen::MatrixXd& fg);
+                                                                   const Eigen::MatrixXd& fg,
+                                                                   const int nz,
+                                                                   const int nr);
