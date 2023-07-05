@@ -62,6 +62,22 @@ MPCFollower::MPCFollower()
   pnh_.param("lateral_error_lim", lateral_error_lim_, double(0.1));
   pnh_.param("vehicle_model_wheelbase", wheelbase_, double(2.9));
 
+   
+  /*QP formulation setup*/
+  pnh_.param("qp_formulation_type", qp_formulation_type_, std::string("EMPC"));
+  if (qp_formulation_type_ == "OnlineMPC")
+  {
+   ROS_INFO("[MPC] set qp_formulation_type = OnlineMPC"); 
+  }
+  else if (qp_formulation_type_ == "EMPC")
+  {
+   ROS_INFO("[MPC] set qp_formulation_type = EMPC"); 
+  }
+  else
+  {
+   ROS_ERROR("[MPC] qp_formulation_type is undefined");
+  }
+  
   /* vehicle model setup */
   pnh_.param("vehicle_model_type", vehicle_model_type_, std::string("kinematics"));
   if (vehicle_model_type_ == "kinematics")
@@ -104,21 +120,6 @@ MPCFollower::MPCFollower()
   else
   {
     ROS_ERROR("[MPC] vehicle_model_type is undefined");
-  }
-  
-  /*QP formulation setup*/
-  pnh_.param("qp_formulation_type", qp_formulation_type_, std::string("EMPC"));
-  if (qp_formulation_type_ == "OnlineMPC")
-  {
-   ROS_INFO("[MPC] set qp_formulation_type = OnlineMPC"); 
-  }
-  else if (qp_formulation_type_ == "EMPC")
-  {
-   ROS_INFO("[MPC] set qp_formulation_type = EMPC"); 
-  }
-  else
-  {
-   ROS_ERROR("[MPC] qp_formulation_type is undefined");
   }
 
   /* QP solver setup */

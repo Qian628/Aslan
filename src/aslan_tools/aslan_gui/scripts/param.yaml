@@ -42,6 +42,10 @@ Waypoints Loader:
   velocity_max: 10.0
   velocity_min: 4.0
   velocity_offset: 4
+Waypoints Saver:
+  interval: 1.0
+  save_filename: /tmp/saved_waypoints.csv
+  save_velocity: false
 booted_cmds:
   names:
   - twizy_sim
@@ -49,11 +53,7 @@ booted_cmds:
   - null
   - Velocity Request
   - Lane Selection
-  - Pure Pursuit
   - Low Pass Filtering
-  - null
-  - null
-  - vehicle_interface
 lane_select:
   distance_threshold_neighbor_lanes: 5.0
   enablePlannerDynamicSwitch: false
