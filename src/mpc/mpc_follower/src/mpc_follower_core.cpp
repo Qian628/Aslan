@@ -127,22 +127,19 @@ MPCFollower::MPCFollower()
   pnh_.param("qp_solver_type", qp_solver_type_, std::string("unconstraint_fast"));
   if (qp_solver_type_ == "unconstraint")
   {
-    qpsolver_ptr1_ = std::make_shared<QPSolverEigenLeastSquare>();
-    qpsolver_ptr2_ = std::make_shared<QPSolverEigenLeastSquare>();
+    qpsolver_ptr_ = std::make_shared<QPSolverEigenLeastSquare>();
     ROS_INFO("[MPC] set qp solver = unconstraint");
   }
   else if (qp_solver_type_ == "unconstraint_fast")
   {
-    qpsolver_ptr1_ = std::make_shared<QPSolverEigenLeastSquareLLT>();
-    qpsolver_ptr2_ = std::make_shared<QPSolverEigenLeastSquareLLT>();
+    qpsolver_ptr_ = std::make_shared<QPSolverEigenLeastSquareLLT>();
     ROS_INFO("[MPC] set qp solver = unconstraint_fast");
   }
   else if (qp_solver_type_ == "qpoases_hotstart")
   {
     int max_iter;
     pnh_.param("qpoases_max_iter", max_iter, int(500));
-    qpsolver_ptr1_ = std::make_shared<QPSolverQpoasesHotstart>(max_iter);
-    qpsolver_ptr2_ = std::make_shared<QPSolverQpoasesHotstart>(max_iter);
+    qpsolver_ptr_ = std::make_shared<QPSolverQpoasesHotstart>(max_iter);
     ROS_INFO("[MPC] set qp solver = qpoases_hotstart");
   }
   else
@@ -192,9 +189,9 @@ MPCFollower::MPCFollower()
 void MPCFollower::timerCallback(const ros::TimerEvent &te)
 {
   /* guard */
-  if (vehicle_model_ptr_ == nullptr || qpsolver_ptr1_ == nullptr)
+  if (vehicle_model_ptr_ == nullptr || qpsolver_ptr_ == nullptr)
   {
-    DEBUG_INFO("[MPC] vehicle_model = %d, qp_solver = %d", !(vehicle_model_ptr_ == nullptr), !(qpsolver_ptr1_ == nullptr));
+    DEBUG_INFO("[MPC] vehicle_model = %d, qp_solver = %d", !(vehicle_model_ptr_ == nullptr), !(qpsolver_ptr_ == nullptr));
     publishControlCommands(0.0, 0.0, steer_cmd_prev_, 0.0); // publish brake
     return;
   }
@@ -504,13 +501,9 @@ double scale_factor = Uref(0,0);
 Eigen::Vector3d result = scale_factor * vec;
 Eigen::Vector3d dx0 = x0 - result;
 /*declare the optimisation variables*/
-Eigen::VectorXd Uex1;
-Eigen::VectorXd Uex2;
-Eigen::VectorXd Uex3;
+Eigen::VectorXd Uex;
 Eigen::VectorXd Zex;
-Eigen::VectorXd dUex1;
-Eigen::VectorXd dUex2;
-Eigen::VectorXd dUex3;
+Eigen::VectorXd dUex;
 
 /*The following include three methods to solve the optimial control input*/
   if (formulation == "OnlineMPC")
@@ -520,13 +513,13 @@ Eigen::VectorXd dUex3;
         * H = (Cex * Bex)' * Qex * (Cex * Bex) + Rex
         * f' = (Cex * Aex * dx0)' * Qex * (Cex * Bex)
         */
-        const Eigen::MatrixXd CB1 = Cex * Bex;
-        const Eigen::MatrixXd QCB1 = Qex * CB1;
-        Eigen::MatrixXd H1 = Eigen::MatrixXd::Zero(DIM_U * N, DIM_U * N);
-        H1.triangularView<Eigen::Upper>() = CB1.transpose() * QCB1; // NOTE: This calculation is very heavy. searching for a good way...
-        H1.triangularView<Eigen::Upper>() += Rex;
-        H1.triangularView<Eigen::Lower>() = H1.transpose();
-        Eigen::MatrixXd f1 = (Cex * Aex * dx0).transpose() * QCB1;
+        const Eigen::MatrixXd CB = Cex * Bex;
+        const Eigen::MatrixXd QCB = Qex * CB;
+        Eigen::MatrixXd H = Eigen::MatrixXd::Zero(DIM_U * N, DIM_U * N);
+        H.triangularView<Eigen::Upper>() = CB.transpose() * QCB; // NOTE: This calculation is very heavy. searching for a good way...
+        H.triangularView<Eigen::Upper>() += Rex;
+        H.triangularView<Eigen::Lower>() = H.transpose();
+        Eigen::MatrixXd f = (Cex * Aex * dx0).transpose() * QCB;
         /* constraint matrix : lb < dUex < ub, lbA <  A * dUex < ubA
         * lb = [-du_lim; -du_lim; ... ; -du_lim]-Urefex
         * ub = [du_lim; du_lim; ... ; du_lim]-Urefex
@@ -534,21 +527,21 @@ Eigen::VectorXd dUex3;
         * lbA = [-x_lim; -x_lim; ... ; -x_lim] - Aex * x0
         * ubA = [x_lim; x_lim; ... ; x_lim] - Aex * x0
         */
-        Eigen::VectorXd lb1 = Eigen::VectorXd::Constant(DIM_U * N, -u_lim) - Urefex; // applying min steering limit
-        Eigen::VectorXd ub1 = Eigen::VectorXd::Constant(DIM_U * N, u_lim) - Urefex;  // applying max steering limit
-        Eigen::MatrixXd A1 = Bex;
-        Eigen::VectorXd lbA1 = Eigen::VectorXd::Zero(DIM_X * N);
-        Eigen::VectorXd ubA1 = Eigen::VectorXd::Zero(DIM_X * N);
+        Eigen::VectorXd lb = Eigen::VectorXd::Constant(DIM_U * N, -u_lim) - Urefex; // applying min steering limit
+        Eigen::VectorXd ub = Eigen::VectorXd::Constant(DIM_U * N, u_lim) - Urefex;  // applying max steering limit
+        Eigen::MatrixXd A = Bex;
+        Eigen::VectorXd lbA = Eigen::VectorXd::Zero(DIM_X * N);
+        Eigen::VectorXd ubA = Eigen::VectorXd::Zero(DIM_X * N);
           for (int i = 0; i < N; ++i) 
           {
-            lbA1.block(i * DIM_X, 0, DIM_X, 1) = -x_lim;
-            ubA1.block(i * DIM_X, 0, DIM_X, 1) = x_lim;
+            lbA.block(i * DIM_X, 0, DIM_X, 1) = -x_lim;
+            ubA.block(i * DIM_X, 0, DIM_X, 1) = x_lim;
           }
-        lbA1 -= Aex * dx0;
-        ubA1 -= Aex * dx0;
+        lbA -= Aex * dx0;
+        ubA -= Aex * dx0;
         /*solve the qp problem using qpoases solver*/
         auto start1 = std::chrono::system_clock::now();
-        if (!qpsolver_ptr1_->solve(H1, f1.transpose(), A1, lb1, ub1, lbA1, ubA1, dUex1))
+        if (!qpsolver_ptr_->solve(H, f.transpose(), A, lb, ub, lbA, ubA, dUex))
         {
           ROS_WARN("[MPC] qp solver error");
           return false;
@@ -556,14 +549,14 @@ Eigen::VectorXd dUex3;
         double elapsed1 = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - start1).count() * 1.0e-6;
         DEBUG_INFO("[MPC] calculateMPC: qp solver calculation time = %f [ms]", elapsed1);
         std::cout << "MPC calculation time: " << elapsed1 << std::endl;
-        if (dUex1.array().isNaN().any())
+        if (dUex.array().isNaN().any())
         {
           ROS_WARN("[MPC] calculateMPC: model Uex includes NaN, stop MPC. ");
           return false;
         }
 
         /*add feedforward part*/
-        Uex1 = Urefex + dUex1;
+        Uex = Urefex + dUex;
        }      
   else if (formulation == "FormulationX")
        {
@@ -574,10 +567,10 @@ Eigen::VectorXd dUex3;
           *       0              Rex]
           * f' = 0 
           */
-          Eigen::MatrixXd H2 = Eigen::MatrixXd::Zero(DIM_X * N + DIM_U * N, DIM_X * N + DIM_U * N);
-          H2.block(0, 0, DIM_X * N, DIM_X * N) = Cex.transpose() * Qex * Cex;
-          H2.block(DIM_X * N, DIM_X * N, DIM_U * N, DIM_U * N) = Rex;
-          Eigen::RowVectorXd f2 = Eigen::RowVectorXd::Zero(DIM_X * N + DIM_U * N);
+          Eigen::MatrixXd H = Eigen::MatrixXd::Zero(DIM_X * N + DIM_U * N, DIM_X * N + DIM_U * N);
+          H.block(0, 0, DIM_X * N, DIM_X * N) = Cex.transpose() * Qex * Cex;
+          H.block(DIM_X * N, DIM_X * N, DIM_U * N, DIM_U * N) = Rex;
+          Eigen::RowVectorXd f = Eigen::RowVectorXd::Zero(DIM_X * N + DIM_U * N);
           /* constraint matrix : lb < Zex < ub, lbA = A*Zex = ubA
           * A = [I, -Bex]
           * lbA = Aex * dx0
@@ -585,27 +578,27 @@ Eigen::VectorXd dUex3;
           * lb = [-xlim; -xlim; ... ; -xlim; -du_lim; -du_lim; ... ; -du_lim]
           * ub = [xlim; xlim; ... ; xlim; du_lim; du_lim; ... ; du_lim]
           */
-          Eigen::MatrixXd A2 = Eigen::MatrixXd::Zero(DIM_X * N, DIM_X * N + DIM_U * N);
-          A2.block(0, 0, DIM_X * N, DIM_X * N) = Eigen::MatrixXd::Identity(DIM_X * N, DIM_X * N);
-          A2.block(0, DIM_X * N, DIM_X * N, DIM_U * N) = -Bex;
+          Eigen::MatrixXd A = Eigen::MatrixXd::Zero(DIM_X * N, DIM_X * N + DIM_U * N);
+          A.block(0, 0, DIM_X * N, DIM_X * N) = Eigen::MatrixXd::Identity(DIM_X * N, DIM_X * N);
+          A.block(0, DIM_X * N, DIM_X * N, DIM_U * N) = -Bex;
 
-          Eigen::VectorXd lbA2 = Aex * dx0;
-          Eigen::VectorXd ubA2 = lbA2;
+          Eigen::VectorXd lbA = Aex * dx0;
+          Eigen::VectorXd ubA = lbA;
 
-          Eigen::VectorXd lb2 = Eigen::VectorXd::Zero(DIM_X * N + DIM_U * N);
-          Eigen::VectorXd ub2 = Eigen::VectorXd::Zero(DIM_X * N + DIM_U * N);
+          Eigen::VectorXd lb = Eigen::VectorXd::Zero(DIM_X * N + DIM_U * N);
+          Eigen::VectorXd ub = Eigen::VectorXd::Zero(DIM_X * N + DIM_U * N);
 
           for (int i = 0; i < N; ++i) 
           {
-            lb2.block(i * DIM_X, 0, DIM_X, 1) = -x_lim;
-            ub2.block(i * DIM_X, 0, DIM_X, 1) = x_lim;
+            lb.block(i * DIM_X, 0, DIM_X, 1) = -x_lim;
+            ub.block(i * DIM_X, 0, DIM_X, 1) = x_lim;
           }
-          lb2.tail(DIM_U * N) = Eigen::VectorXd::Constant(DIM_U * N, -u_lim) - Urefex;
-          ub2.tail(DIM_U * N) = Eigen::VectorXd::Constant(DIM_U * N, u_lim) - Urefex;
+          lb.tail(DIM_U * N) = Eigen::VectorXd::Constant(DIM_U * N, -u_lim) - Urefex;
+          ub.tail(DIM_U * N) = Eigen::VectorXd::Constant(DIM_U * N, u_lim) - Urefex;
 
           /*solve solve the qp problem using qpoases solver*/
           auto start2 = std::chrono::system_clock::now();
-          if (!qpsolver_ptr2_->solve(H2, f2.transpose(), A2, lb2, ub2, lbA2, ubA2, Zex))
+          if (!qpsolver_ptr_->solve(H, f.transpose(), A, lb, ub, lbA, ubA, Zex))
           {
             ROS_WARN("[MPC] qp solver error");
             return false;
@@ -619,10 +612,10 @@ Eigen::VectorXd dUex3;
             return false;
           }
           /*get the optimal control input*/
-          dUex2 = Zex.tail(DIM_U * N);
+          dUex = Zex.tail(DIM_U * N);
 
           /*add feedforward part*/
-          Uex2 = Urefex + dUex2;
+          Uex = Urefex + dUex;
        }   
   else if (formulation == "EMPC") 
        {
@@ -633,14 +626,14 @@ Eigen::VectorXd dUex3;
           /*search the optimal solution based on initial state*/  
             Solution solution = empc_solution_pQP1_ff_KinematicsBicycleModelWithDelay(dx0, empc_data.H, empc_data.ni, empc_data.fF, empc_data.tF, empc_data.tg, empc_data.tH, empc_data.fg, empc_data.nz, empc_data.nr);
           /*get the optimal control input*/  
-            dUex3 = solution.z;
+            dUex = solution.z;
           /*get the corresponding index of region*/
             int index_i = solution.i;
         double elapsed3 = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - start3).count() * 1.0e-6;
           DEBUG_INFO("EMPC calculation time = %f [ms]", elapsed3);
           std::cout << "EMPC calculation time: " << elapsed3 << std::endl;
           /*add feedforward part*/
-            Uex3 = Urefex + dUex3;
+            Uex = Urefex + dUex;
        }
   else
        {
@@ -648,14 +641,14 @@ Eigen::VectorXd dUex3;
                 return false;
        }
   /* saturation */
-  const double u_sat = std::max(std::min(Uex3(0), u_lim), -u_lim);
+  const double u_sat = std::max(std::min(Uex(0), u_lim), -u_lim);
 
   /* filtering */
   const double u_filtered = lpf_steering_cmd_.filter(u_sat);
 
   /* set steering command */
   steer_cmd = u_filtered;
-  steer_vel_cmd = (Uex3(1) - Uex3(0)) / DT;
+  steer_vel_cmd = (Uex(1) - Uex(0)) / DT;
 
   /* Velocity control: for simplicity, now we calculate steer and speed separately */
   vel_cmd = ref_traj_.vx[0];
@@ -667,13 +660,13 @@ Eigen::VectorXd dUex3;
   input_buffer_.push_back(steer_cmd);
   input_buffer_.pop_front();
 
-  DEBUG_INFO("[MPC] calculateMPC: mpc steer command raw = %f, filtered = %f, steer_vel_cmd = %f", Uex3(0, 0), u_filtered, steer_vel_cmd);
+  DEBUG_INFO("[MPC] calculateMPC: mpc steer command raw = %f, filtered = %f, steer_vel_cmd = %f", Uex(0, 0), u_filtered, steer_vel_cmd);
   DEBUG_INFO("[MPC] calculateMPC: mpc vel command = %f, acc_cmd = %f", vel_cmd, acc_cmd);
 
   ////////////////// DEBUG ///////////////////
 
   /* calculate predicted trajectory */
-  Eigen::VectorXd Xex = Aex * x0 + Bex * Uex3 + Wex;
+  Eigen::VectorXd Xex = Aex * x0 + Bex * Uex + Wex;
   MPCTrajectory debug_mpc_predicted_traj;
   for (int i = 0; i < N; ++i)
   {

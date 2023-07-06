@@ -92,8 +92,7 @@ private:
   std::shared_ptr<VehicleModelInterface> vehicle_model_ptr_; //!< @brief vehicle model for MPC
   std::string vehicle_model_type_;                           //!< @brief vehicle model type for MPC
   std::string qp_formulation_type_;                          //!< @brief the mpc type: online or explicit
-  std::shared_ptr<QPSolverInterface> qpsolver_ptr1_;          //!< @brief qp solver for MPC formulation 1
-  std::shared_ptr<QPSolverInterface> qpsolver_ptr2_;          //!< @brief qp solver for MPC formulation 2
+  std::shared_ptr<QPSolverInterface> qpsolver_ptr_;          //!< @brief qp solver for MPC formulation
   std::string output_interface_;                             //!< @brief output command type
   std::deque<double> input_buffer_;                          //!< @brief control input (mpc_output) buffer for delay time conpemsation
 
