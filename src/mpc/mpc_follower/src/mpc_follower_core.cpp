@@ -638,6 +638,7 @@ Eigen::VectorXd dUex3;
             int index_i = solution.i;
         double elapsed3 = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - start3).count() * 1.0e-6;
           DEBUG_INFO("EMPC calculation time = %f [ms]", elapsed3);
+          std::cout << "EMPC calculation time: " << elapsed3 << std::endl;
           /*add feedforward part*/
             Uex3 = Urefex + dUex3;
        }
