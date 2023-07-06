@@ -124,6 +124,15 @@ subs:
             depend: param_flag
             depend_bool: 'lambda v : v == 0'
           stat_topic: [ lf ]
+
+      - name: OnlineMPC
+        desc: OnlineMPC algorithm
+        cmd: roslaunch mpc_follower mpc_follower.launch qp_formulation_type:=OnlineMPC
+
+      - name: EMPC
+        desc: Explicit MPC algorithm
+        cmd: roslaunch mpc_follower mpc_follower.launch qp_formulation_type:=EMPC
+
       - name: Low Pass Filtering
         desc: Low pass filter on twist command
         cmd: roslaunch waypoint_follower twist_filter.launch
