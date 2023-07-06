@@ -1,0 +1,7 @@
+csvwrite('empc_data/empc_solution_pQP1_ff_KinematicsBicycleModelWithDelay_3_0_01/H.csv', H)
+csvwrite('empc_data/empc_solution_pQP1_ff_KinematicsBicycleModelWithDelay_3_0_01/ni.csv', ni)
+csvwrite('empc_data/empc_solution_pQP1_ff_KinematicsBicycleModelWithDelay_3_0_01/fF.csv', fF)
+csvwrite('empc_data/empc_solution_pQP1_ff_KinematicsBicycleModelWithDelay_3_0_01/fg.csv', fg)
+csvwrite('empc_data/empc_solution_pQP1_ff_KinematicsBicycleModelWithDelay_3_0_01/tH.csv', tH)
+csvwrite('empc_data/empc_solution_pQP1_ff_KinematicsBicycleModelWithDelay_3_0_01/tF.csv', tF)
+csvwrite('empc_data/empc_solution_pQP1_ff_KinematicsBicycleModelWithDelay_3_0_01/tg.csv', tg)
