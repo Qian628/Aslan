@@ -8,6 +8,6 @@
   <!-- vehicle gazebo info publisher node -->
   <node name="vehicle_gazebo_info_publisher" pkg="vehicle_gazebo_simulation_interface" type="vehicle_gazebo_info_publisher"
         respawn="false" output="screen">
-    <param name="enable_base_link_tf" value="true" />
+    <param name="enable_base_link_tf" value="false" />
   </node>
 </launch>
