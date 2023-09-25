@@ -50,8 +50,8 @@ class VehicleGazeboInfoPublisher
 VehicleGazeboInfoPublisher::VehicleGazeboInfoPublisher() : nh_(""), pnh_("~"), tf_listener_(tf_buffer_)
 {
     client_ = nh_.serviceClient<gazebo_msgs::GetLinkState>("/gazebo/get_link_state");
-    vehicle_pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/current_pose", 1);
-    vehicle_twist_pub_ = nh_.advertise<geometry_msgs::TwistStamped>("/current_velocity", 1);
+    vehicle_pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/gazebo_vehicle/pose", 1);
+    vehicle_twist_pub_ = nh_.advertise<geometry_msgs::TwistStamped>("/gazebo_vehicle/twist", 1);
     vehicle_vel_pub_ = nh_.advertise<std_msgs::Float64>("/gazebo_vehicle/velocity", 1);
     steering_angle_pub_ = nh_.advertise<std_msgs::Float64>("/gazebo_vehicle/steering_angle", 1);
     vehicle_status_pub_ = nh_.advertise<autoware_msgs::VehicleStatus>("/vehicle_status", 1);
